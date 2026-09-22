@@ -43,6 +43,12 @@ import androidx.media3.ui.PlayerView
 import com.example.appvideo.ui.theme.AppvideoTheme
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.activity.compose.BackHandler
+import android.content.pm.ActivityInfo
+import androidx.activity.compose.LocalActivity
+
+
 
 
 
@@ -74,6 +80,7 @@ class MainActivity : ComponentActivity() {
 fun VideoPlayer(
     url: Uri,
     isPlaying: Boolean,
+    Tela: Boolean,
     videovolume: Float,
     modifier: Modifier = Modifier
 ) {
@@ -123,7 +130,7 @@ fun VideoPlayer(
 
                 player = exoPlayer
 
-                useController = false
+                useController = Tela
             }
         }
     )
@@ -135,33 +142,57 @@ fun Tela(
     modifier: Modifier = Modifier
 ) {
 
-    var volume by remember {
-        mutableFloatStateOf(0f)
-    }
-    val context = LocalContext.current
-    var video by remember { mutableStateOf(Uri.parse("android.resource://${context.packageName}/${R.raw.video1}")) }
+    var volume by rememberSaveable { mutableFloatStateOf(0f) }
 
+    val context = LocalContext.current
+    val activity = LocalActivity.current
+
+
+    var video by remember { mutableStateOf(Uri.parse("android.resource://${context.packageName}/${R.raw.video1}")) }
+    var isFullscreen by rememberSaveable{ mutableStateOf(false) }
     var isPlaying by remember{ mutableStateOf(true)}
 
+    BackHandler(enabled = isFullscreen) {
+        isFullscreen = false
+    }
 
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(10.dp)
-            .padding(top = 100.dp),
+        modifier = if(isFullscreen){
+            Modifier.fillMaxSize()
+        } else {
+            Modifier
+                .fillMaxSize()
+                .padding(10.dp)
+                .padding(top = 100.dp)
+        },
 
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+
+        LaunchedEffect(isFullscreen) {
+            if (isFullscreen){
+                activity?.requestedOrientation =
+                    ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+            } else {
+                activity?.requestedOrientation =
+                    ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            }
+        }
 
 
 
         VideoPlayer(
             url = video,
             isPlaying = isPlaying,
+            Tela = isFullscreen,
             videovolume = volume,
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(16f / 9f)
+            modifier = if(isFullscreen){
+                Modifier.fillMaxSize()
+            } else {
+                Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(16f / 9f)
+            }
         )
 
 
@@ -195,7 +226,7 @@ fun Tela(
             // Botão 2
             Button(
                 onClick = {
-                    video = Uri.parse("android.resource://${context.packageName}/${R.raw.video2}")
+                    isFullscreen = true
                 },
 
                 contentPadding = PaddingValues(
